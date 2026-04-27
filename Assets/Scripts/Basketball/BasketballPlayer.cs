@@ -19,7 +19,11 @@ public class BasketballPlayer : MonoBehaviour
     [SerializeField] private Transform shotPoint;
     [SerializeField] private GameObject ballPrefab;
     [SerializeField] private Transform hoopTarget;
-    [SerializeField] private float shotAngle = 50f;
+    [SerializeField] private float shotAngle = 58f;
+
+    [Header("Asistencia de tiro")]
+    [Tooltip("Corrige lateralmente el tiro hacia el centro del aro (0 = desactivado, 1 = máximo)")]
+    [SerializeField, Range(0f, 1f)] private float aimAssist = 0.6f;
 
     [Header("Trayectoria")]
     [SerializeField] private TrajectoryRenderer trajectoryRenderer;
@@ -96,17 +100,19 @@ public class BasketballPlayer : MonoBehaviour
     //  Apuntado y disparo
     // ──────────────────────────────────────────────
 
+    private void FaceHoop()
+    {
+        if (hoopTarget == null) return;
+        Vector3 dir = hoopTarget.position - transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude > 0.01f)
+            transform.rotation = Quaternion.LookRotation(dir);
+    }
+
     private void BeginAim()
     {
         _isAiming = true;
-        // Rota al jugador hacia el aro si hay referencia
-        if (hoopTarget != null)
-        {
-            Vector3 dir = hoopTarget.position - transform.position;
-            dir.y = 0f;
-            if (dir.sqrMagnitude > 0.01f)
-                transform.rotation = Quaternion.LookRotation(dir);
-        }
+        FaceHoop(); // Auto-rotar hacia el aro al apuntar
     }
 
     private void EndAim()
@@ -119,6 +125,8 @@ public class BasketballPlayer : MonoBehaviour
     {
         if (ballPrefab == null || shotPoint == null) return;
 
+        // Siempre apuntar al aro al disparar (aunque no se haya apuntado antes)
+        FaceHoop();
         EndAim();
 
         GameObject ball = Instantiate(ballPrefab, shotPoint.position, Quaternion.identity);
@@ -133,6 +141,8 @@ public class BasketballPlayer : MonoBehaviour
     /// Calcula la velocidad inicial necesaria para alcanzar el aro
     /// usando movimiento proyectil con ángulo fijo.
     ///   v = sqrt( g * dx² / (2·cos²a·(dx·tana − dy)) )
+    ///
+    /// Incluye asistencia de apuntado: corrige lateralmente hacia el centro del aro.
     /// </summary>
     private Vector3 CalculateShotVelocity()
     {
@@ -140,12 +150,29 @@ public class BasketballPlayer : MonoBehaviour
             return (transform.forward + Vector3.up * 0.7f).normalized * 10f;
 
         Vector3 start  = shotPoint.position;
+
+        // Aim assist: interpolar posición de origen hacia la línea directa al aro
+        Vector3 assistedStart = start;
+        if (aimAssist > 0f && hoopTarget != null)
+        {
+            // Proyectar el shotPoint sobre la línea jugador→aro para reducir offset lateral
+            Vector3 toHoop = hoopTarget.position - transform.position;
+            toHoop.y = 0f;
+            Vector3 toHoopNorm = toHoop.normalized;
+            Vector3 offset = start - transform.position;
+            offset.y = 0f;
+            float along  = Vector3.Dot(offset, toHoopNorm);
+            Vector3 corrected = transform.position + toHoopNorm * along;
+            corrected.y = start.y;
+            assistedStart = Vector3.Lerp(start, corrected, aimAssist);
+        }
+
         Vector3 target = hoopTarget.position;
 
-        Vector3 horizontal = target - start;
+        Vector3 horizontal = target - assistedStart;
         horizontal.y = 0f;
         float dx = horizontal.magnitude;
-        float dy = target.y - start.y;
+        float dy = target.y - assistedStart.y;
 
         float g    = Mathf.Abs(Physics.gravity.y);
         float a    = shotAngle * Mathf.Deg2Rad;
