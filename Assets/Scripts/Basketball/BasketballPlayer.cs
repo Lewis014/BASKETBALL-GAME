@@ -28,6 +28,10 @@ public class BasketballPlayer : MonoBehaviour
     [Header("Trayectoria")]
     [SerializeField] private TrajectoryRenderer trajectoryRenderer;
 
+    [Header("Zonas de puntuación")]
+    [SerializeField] private ShotZoneDetector zoneDetector;
+    [SerializeField] private GoalDetector goalDetector;
+
     [Header("Input Actions")]
     [Tooltip("Player/Move")]
     [SerializeField] private InputActionReference moveAction;
@@ -40,6 +44,10 @@ public class BasketballPlayer : MonoBehaviour
     private Vector2 _moveInput;
     private Vector3 _velocity;
     private bool _isAiming;
+    private ShotZone _currentZone = ShotZone.TwoPoint;
+
+    // Estilos HUD zona
+    private GUIStyle _zoneStyle;
 
     private void Awake() => _controller = GetComponent<CharacterController>();
 
@@ -68,6 +76,10 @@ public class BasketballPlayer : MonoBehaviour
     {
         HandleGravity();
         Move();
+
+        // Actualizar zona actual
+        if (zoneDetector != null)
+            _currentZone = zoneDetector.GetZone(transform.position);
 
         if (_isAiming && trajectoryRenderer != null && shotPoint != null)
             trajectoryRenderer.Show(shotPoint.position, CalculateShotVelocity());
@@ -127,6 +139,12 @@ public class BasketballPlayer : MonoBehaviour
 
         // Siempre apuntar al aro al disparar (aunque no se haya apuntado antes)
         FaceHoop();
+
+        // Registrar zona ANTES de mover (la posición actual es la del tiro)
+        int shotPoints = zoneDetector != null ? zoneDetector.GetPoints(transform.position) : 2;
+        if (goalDetector != null)
+            goalDetector.SetPendingPoints(shotPoints);
+
         EndAim();
 
         GameObject ball = Instantiate(ballPrefab, shotPoint.position, Quaternion.identity);
@@ -190,5 +208,54 @@ public class BasketballPlayer : MonoBehaviour
 
         Vector3 dir = horizontal.normalized;
         return dir * speed * cosA + Vector3.up * speed * Mathf.Sin(a);
+    }
+
+    // ── HUD de zona ─────────────────────────────────────────────────
+
+    private void OnGUI()
+    {
+        if (zoneDetector == null) return;
+
+        InitZoneStyle();
+
+        bool isThree = _currentZone == ShotZone.ThreePoint;
+        string label    = isThree ? "ZONA 3 PUNTOS" : "ZONA 2 PUNTOS";
+        Color  bgColor  = isThree ? new Color(0.1f, 0.6f, 1f, 0.75f)
+                                  : new Color(0.1f, 0.8f, 0.2f, 0.75f);
+
+        // Fondo redondeado (simulado con un rect coloreado)
+        float w = 240f, h = 36f;
+        float x = Screen.width / 2f - w / 2f;
+        float y = Screen.height - 70f;
+
+        GUI.color = bgColor;
+        GUI.DrawTexture(new Rect(x - 6, y - 4, w + 12, h + 8), Texture2D.whiteTexture);
+        GUI.color = Color.white;
+
+        GUI.Label(new Rect(x, y, w, h), label, _zoneStyle);
+
+        // Distancia al aro
+        float dist = zoneDetector.HorizontalDistToHoop(transform.position);
+        var distStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize  = 13,
+            alignment = TextAnchor.MiddleCenter,
+            normal    = { textColor = new Color(1f, 1f, 1f, 0.8f) }
+        };
+        GUI.Label(new Rect(x, y + h, w, 20f),
+                  $"Dist. al aro: {dist:F1} m  |  Línea 3PT: {zoneDetector.ThreePtRadius} m",
+                  distStyle);
+    }
+
+    private void InitZoneStyle()
+    {
+        if (_zoneStyle != null) return;
+        _zoneStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize  = 20,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            normal    = { textColor = Color.white }
+        };
     }
 }

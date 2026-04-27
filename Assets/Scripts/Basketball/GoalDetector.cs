@@ -7,7 +7,6 @@ using UnityEngine;
 public class GoalDetector : MonoBehaviour
 {
     [SerializeField] private AudioSource goalSound;
-    [SerializeField] private int pointsPerBasket = 2;
 
     [Tooltip("Segundos de espera antes de poder contar otra canasta")]
     [SerializeField] private float scoreCooldown = 1.5f;
@@ -17,6 +16,10 @@ public class GoalDetector : MonoBehaviour
 
     private float _passedTopTime = -999f; // momento en que la pelota tocó el trigger superior
     private float _lastScoreTime = -999f;
+    private int   _pendingPoints = 2;     // puntos del tiro en vuelo (2 o 3)
+
+    /// <summary>Llamado por BasketballPlayer al disparar para registrar la zona del tiro.</summary>
+    public void SetPendingPoints(int pts) => _pendingPoints = pts;
 
     private bool PassedTopRecently => (Time.time - _passedTopTime) < passedTopWindow;
 
@@ -35,9 +38,11 @@ public class GoalDetector : MonoBehaviour
             if (Time.time - _lastScoreTime < scoreCooldown) return;
 
             _lastScoreTime = Time.time;
-            GameManager.Instance?.AddScore(pointsPerBasket);
+            int pts = _pendingPoints;
+            _pendingPoints = 2; // reset para el siguiente tiro
+            GameManager.Instance?.AddScore(pts);
             goalSound?.Play();
-            Debug.Log($"[GoalDetector] ¡CANASTA! +{pointsPerBasket} pts");
+            Debug.Log($"[GoalDetector] ¡CANASTA! +{pts} pts ({(pts == 3 ? "TRIPLE" : "doble")})");
         }
     }
 

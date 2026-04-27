@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
     // ── Popup de puntos ─────────────────────────────────────────────
     private string _popupText   = "";
     private float  _popupTimer  = 0f;
+    private bool   _popupIsTriple = false;
     private const float PopupDuration = 2f;
 
     // ── Estilos GUI ─────────────────────────────────────────────────
@@ -47,12 +48,17 @@ public class GameManager : MonoBehaviour
         if (_popupTimer > 0f)
         {
             float alpha = Mathf.Clamp01(_popupTimer / PopupDuration);
-            Color c = _popupStyle.normal.textColor;
-            c.a = alpha;
-            _popupStyle.normal.textColor = c;
 
-            float yOffset = (1f - alpha) * 60f; // sube mientras desaparece
-            DrawShadowLabel(new Rect(0, 180 - yOffset, Screen.width, 80),
+            // Triple → cyan brillante, doble → amarillo dorado
+            Color baseColor = _popupIsTriple
+                ? new Color(0.1f, 0.95f, 1f, alpha)
+                : new Color(1f, 0.85f, 0f, alpha);
+
+            _popupStyle.normal.textColor = baseColor;
+            _popupStyle.fontSize = _popupIsTriple ? 64 : 56;
+
+            float yOffset = (1f - alpha) * 60f;
+            DrawShadowLabel(new Rect(0, 180 - yOffset, Screen.width, 90),
                             _popupText, _popupStyle);
         }
     }
@@ -64,12 +70,13 @@ public class GameManager : MonoBehaviour
         int gained = basePoints * _nextPointMultiplier;
         _score += gained;
 
-        // Mostrar popup
-        string bonus = _nextPointMultiplier > 1 ? " x2 ⚡" : "";
-        ShowPopup($"+{gained}{bonus}");
+        bool isTriple = basePoints >= 3;
+        string bonus  = _nextPointMultiplier > 1 ? " x2 ⚡" : "";
+        string tag    = isTriple ? " TRIPLE!" : "";
+        ShowPopup($"+{gained}{tag}{bonus}", isTriple);
 
         _nextPointMultiplier = 1;
-        Debug.Log($"[GameManager] +{gained} pts | Total: {_score}");
+        Debug.Log($"[GameManager] +{gained} pts ({(isTriple ? "TRIPLE" : "doble")}) | Total: {_score}");
     }
 
     public void ActivateDoublePoints()
@@ -82,10 +89,11 @@ public class GameManager : MonoBehaviour
 
     // ── Internos ──────────────────────────────────────────────────────
 
-    private void ShowPopup(string text)
+    private void ShowPopup(string text, bool isTriple = false)
     {
-        _popupText  = text;
-        _popupTimer = PopupDuration;
+        _popupText    = text;
+        _popupTimer   = PopupDuration;
+        _popupIsTriple = isTriple;
     }
 
     private void InitStyles()

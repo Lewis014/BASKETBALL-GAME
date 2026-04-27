@@ -5,7 +5,7 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
-
+/Packages
 # Archivos de memoria y reportes
 MemoryCaptures/
 Recording/
