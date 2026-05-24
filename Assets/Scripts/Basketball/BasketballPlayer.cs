@@ -32,6 +32,15 @@ public class BasketballPlayer : MonoBehaviour
     [SerializeField] private ShotZoneDetector zoneDetector;
     [SerializeField] private GoalDetector goalDetector;
 
+    [Header("Cámara")]
+    [Tooltip("Referencia a ThirdPersonCamera para movimiento relativo a la cámara.\n" +
+             "Dejar vacío para movimiento en ejes mundiales.")]
+    [SerializeField] private ThirdPersonCamera thirdPersonCamera;
+
+    [Header("Salto")]
+    [Tooltip("Altura máxima del salto en metros")]
+    [SerializeField] private float jumpHeight = 1.5f;
+
     [Header("Input Actions")]
     [Tooltip("Player/Move")]
     [SerializeField] private InputActionReference moveAction;
@@ -39,12 +48,19 @@ public class BasketballPlayer : MonoBehaviour
     [SerializeField] private InputActionReference aimAction;
     [Tooltip("Player/Attack — lanzar pelota")]
     [SerializeField] private InputActionReference shootAction;
+    [Tooltip("Player/Jump — saltar")]
+    [SerializeField] private InputActionReference jumpAction;
 
     private CharacterController _controller;
     private Vector2 _moveInput;
     private Vector3 _velocity;
     private bool _isAiming;
+    private bool _jumpRequested;
     private ShotZone _currentZone = ShotZone.TwoPoint;
+
+    // ── API pública para la cámara ──────────────────────────────────
+    /// <summary>True mientras el jugador mantiene el botón de apuntar.</summary>
+    public bool IsAiming => _isAiming;
 
     // Estilos HUD zona
     private GUIStyle _zoneStyle;
@@ -63,6 +79,12 @@ public class BasketballPlayer : MonoBehaviour
 
         shootAction.action.performed += ctx => Shoot();
         shootAction.action.Enable();
+
+        if (jumpAction != null)
+        {
+            jumpAction.action.performed += ctx => _jumpRequested = true;
+            jumpAction.action.Enable();
+        }
     }
 
     private void OnDisable()
@@ -70,6 +92,7 @@ public class BasketballPlayer : MonoBehaviour
         moveAction.action.Disable();
         aimAction.action.Disable();
         shootAction.action.Disable();
+        jumpAction?.action.Disable();
     }
 
     private void Update()
@@ -91,16 +114,43 @@ public class BasketballPlayer : MonoBehaviour
 
     private void HandleGravity()
     {
-        if (_controller.isGrounded && _velocity.y < 0f)
-            _velocity.y = -2f;
+        if (_controller.isGrounded)
+        {
+            // Pequeña fuerza hacia abajo para mantener el contacto con el suelo
+            if (_velocity.y < 0f)
+                _velocity.y = -2f;
+
+            // Aplicar salto si se solicitó
+            if (_jumpRequested)
+            {
+                // Fórmula: v = sqrt(h * -2 * g)  →  da exactamente la altura deseada
+                _velocity.y = Mathf.Sqrt(jumpHeight * -2f * Physics.gravity.y);
+            }
+        }
+
+        _jumpRequested = false; // consumir la solicitud siempre (grounded o no)
         _velocity.y += Physics.gravity.y * Time.deltaTime;
     }
 
     private void Move()
     {
-        Vector3 move = new Vector3(_moveInput.x, 0f, _moveInput.y);
+        Vector3 move;
 
-        // Rota el jugador hacia la dirección de movimiento
+        if (thirdPersonCamera != null)
+        {
+            // Movimiento relativo a la cámara:
+            // W/S avanza en la dirección que mira la cámara (eje horizontal)
+            // A/D avanza perpendicular a esa dirección
+            move = thirdPersonCamera.CameraForwardFlat * _moveInput.y
+                 + thirdPersonCamera.CameraRightFlat   * _moveInput.x;
+        }
+        else
+        {
+            // Fallback: movimiento en ejes mundiales (comportamiento original)
+            move = new Vector3(_moveInput.x, 0f, _moveInput.y);
+        }
+
+        // Rotar el jugador hacia la dirección de movimiento (no hacia la cámara)
         if (move.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.LookRotation(move);
 
