@@ -177,6 +177,9 @@ GameObject:
   - component: {fileID: 120004}
   - component: {fileID: 120005}
   - component: {fileID: 120006}
+  - component: {fileID: 120007}
+  - component: {fileID: 120008}
+  - component: {fileID: 120009}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -348,6 +351,60 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &120007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120000}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b1e39b67c924c2a9f08d1f4a65c7b2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 150001}
+  basketballPlayer: {fileID: 150005}
+  eyeHeight: 1.8
+  mouseSensitivity: 0.18
+  invertY: 0
+  minPitch: -20
+  maxPitch: 60
+--- !u!114 &120008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120000}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a7d1184b2e41c3a6d55e8409bb7c2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 150001}
+  sidelineX: 13
+  cameraHeight: 6
+  zOffset: -1
+  lookHeight: 1.4
+  lookAtPlayerWidth: 0.75
+  followSmoothTime: 0.12
+  rotationSmoothSpeed: 10
+--- !u!114 &120009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c0d4a7f5d8b44c78e99f35af81d2836, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  thirdPersonCamera: {fileID: 120004}
+  firstPersonCamera: {fileID: 120007}
+  sideCamera: {fileID: 120008}
 --- !u!1 &130000
 GameObject:
   m_ObjectHideFlags: 0
